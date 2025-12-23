@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Test, console} from 'forge-std/Test.sol';
-import {OracleDisputeSystem} from '../src/OracleDisputeSystem.sol';
-import {DeployODS} from '../script/DeployODS.s.sol';
+import {Test, console} from "forge-std/Test.sol";
+import {OracleDisputeSystem} from "../src/OracleDisputeSystem.sol";
+import {DeployODS} from "../script/DeployODS.s.sol";
 
-contract OracleDisputeSystemTest is Test{
+contract OracleDisputeSystemTest is Test {
     OracleDisputeSystem public ods;
     DeployODS public deployer;
 
@@ -19,7 +19,7 @@ contract OracleDisputeSystemTest is Test{
     event DataPointFinalized(bytes32 indexed questionId, bytes32 dataPoint, uint256 bond);
     event Withdrawn(bytes32 indexed questionId, address indexed bonder, uint256 payOut);
 
-    function setUp() external{
+    function setUp() external {
         deployer = new DeployODS();
         (ods) = deployer.run();
 
@@ -28,19 +28,19 @@ contract OracleDisputeSystemTest is Test{
         vm.deal(luke, 10e18);
     }
 
-    modifier valuePosted(){
+    modifier valuePosted() {
         vm.prank(phil);
         ods.postValue{value: 1e18}(0, 0);
         _;
     }
 
-    function testPostValueRevertsWhenBondIsLesser() public{
+    function testPostValueRevertsWhenBondIsLesser() public {
         vm.prank(phil);
         vm.expectRevert(OracleDisputeSystem.ODS_RequiresMoreBond.selector);
         ods.postValue{value: 0}(0, 0);
     }
 
-    function testPostValueRevertsWhenTimeOutHasOccured() public{
+    function testPostValueRevertsWhenTimeOutHasOccured() public {
         vm.prank(phil);
         ods.postValue{value: 1e18}(0, 0);
 
@@ -51,13 +51,13 @@ contract OracleDisputeSystemTest is Test{
         ods.postValue{value: 1e18}(0, 0);
     }
 
-    function testPostValueUpdatesDataStructures() public valuePosted{
+    function testPostValueUpdatesDataStructures() public valuePosted {
         assert(ods.getTotalEscrow(0) == 1e18);
         assert(ods.getPooledBond(0, 0) == 1e18);
         assert(ods.getUserBond(0, phil, 0) == 1e18);
     }
 
-    function testMultiplePostValueUpdatesDataStructures() public{
+    function testMultiplePostValueUpdatesDataStructures() public {
         vm.prank(phil);
         ods.postValue{value: 1e18}(0, "no");
 
@@ -72,39 +72,39 @@ contract OracleDisputeSystemTest is Test{
         assert(dp.finalized == false);
     }
 
-    function testEventIsEmittedWhenValueIsPosted() public{
+    function testEventIsEmittedWhenValueIsPosted() public {
         vm.prank(phil);
         vm.expectEmit(true, true, false, false, address(ods));
         emit DataPointSubmitted(0, phil, 0, 1e18);
         ods.postValue{value: 1e18}(0, 0);
     }
 
-    function testCannotFinalizeDataPointBeforeTimeout() public valuePosted{
+    function testCannotFinalizeDataPointBeforeTimeout() public valuePosted {
         vm.prank(phil);
         vm.expectRevert(OracleDisputeSystem.ODS_TimeOutHasNotOccured.selector);
         ods.finalizeData(0);
     }
 
-    function testCanFinalizeDataPointAfterTimeout() public valuePosted{
+    function testCanFinalizeDataPointAfterTimeout() public valuePosted {
         vm.warp(block.timestamp + timeout + 1);
         vm.prank(phil);
         ods.finalizeData(0);
     }
 
-    modifier Finalized(){
+    modifier Finalized() {
         vm.warp(block.timestamp + timeout + 1);
         vm.prank(phil);
         ods.finalizeData(0);
         _;
     }
 
-    function testCannotPostValueAfterDatapointIsFinalized() public valuePosted Finalized{
+    function testCannotPostValueAfterDatapointIsFinalized() public valuePosted Finalized {
         vm.prank(claire);
         vm.expectRevert(OracleDisputeSystem.ODS_DataPointAlreadyFinalized.selector);
         ods.postValue{value: 1e18}(0, "yes");
     }
 
-    function testCannotWithdrawIfYouLost() public{
+    function testCannotWithdrawIfYouLost() public {
         vm.prank(phil);
         ods.postValue{value: 1e18}(0, "no");
 
@@ -122,7 +122,7 @@ contract OracleDisputeSystemTest is Test{
         assert(ods.getTotalEscrow(0) == 3e18);
     }
 
-    function testCanWithdrawIfYourDataPointWasFinalized() public{
+    function testCanWithdrawIfYourDataPointWasFinalized() public {
         vm.prank(phil);
         ods.postValue{value: 1e18}(0, "no");
 
@@ -139,7 +139,7 @@ contract OracleDisputeSystemTest is Test{
         assert(ods.getTotalEscrow(0) == 0);
     }
 
-    function testCanWithdrawWithMultipleFunders() public{
+    function testCanWithdrawWithMultipleFunders() public {
         //uint256 philInitialBalance = address(phil).balance;
         uint256 claireInitialBalance = address(claire).balance;
         //uint256 lukeInitialBalance = address(luke).balance;
@@ -168,7 +168,7 @@ contract OracleDisputeSystemTest is Test{
         ods.withdraw("question1");
 
         assert((address(claire).balance - claireInitialBalance) < 2.4e18);
-        assert((address(claire).balance - claireInitialBalance) < (2e18 + ((2e18 * 1e18)/4e18)));
+        assert((address(claire).balance - claireInitialBalance) < (2e18 + ((2e18 * 1e18) / 4e18)));
     }
 
     function testCanRecoverUnclaimedAfterWithdrawalPeriod() public valuePosted Finalized {
